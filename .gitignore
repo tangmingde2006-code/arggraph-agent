@@ -1,0 +1,76 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+*.egg-info/
+dist/
+build/
+
+# 环境变量（含 API Key，绝不上传）
+.env
+
+# 输出文件
+arggraph_agent/outputs/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# macOS
+.DS_Store
+
+# node_modules (PPT builder)
+node_modules/
+package-lock.json
+
+# Playwright 测试记录
+.playwright-cli/
+
+# WorkBuddy 工作记忆（个人数据）
+.workbuddy/
+
+# 无关实验文件
+Lab5_*.ipynb
+.ipynb_checkpoints/
+
+# 构建脚本（非核心项目）
+build_*.py
+build_*.js
+generate_figures.py
+generate_report.py
+generate_report_v2.py
+
+# RNN 实验代码（独立项目）
+rnn_*.py
+
+# 图片资源（PPT/实验用）
+images/
+fig_*.png
+loss_*.png
+generated-images/
+
+# 其他产出物（PPT/PDF/报告）
+*.pptx
+*.pdf
+*.zip
+*.pth
+*.pkl
+
+# Word 解包临时目录
+unpacked_*/
+
+# 智庫報告（独立目录）
+智庫報告/
+
+# 无关文本数据
+zuowen_text.txt
+dazuoye_text.txt
+kaiti_text.txt
+q24_text.txt
+shakespeare.txt
+topic_text.txt
+
+# package.json（独立工具）
+package.json
