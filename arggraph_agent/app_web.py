@@ -274,7 +274,8 @@ function renderGraphSVG(code) {
   const lines = code.split('\n').filter(l => l.trim());
   for (const line of lines) {
     const trimmed = line.trim();
-    const edgeMatch = trimmed.match(/^(\S+?)\s*-?->\s*(\S+?)$/);
+    // 支持 Mermaid 边格式：-->、-.->、-->|label|、-.->|label|
+    const edgeMatch = trimmed.match(/^(\S+?)\s*-*(?:\.-*)?>\s*(?:\|[^|]+\|)?\s*(\S+?)$/);
     if (edgeMatch) {
       edges.push({from:edgeMatch[1], to:edgeMatch[2]});
       continue;
