@@ -88,6 +88,22 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
   .error-box { background:#fef2f2; border:1px solid #fecaca; border-radius:8px; padding:16px; color:var(--red); margin:12px 0; }
   .empty-hint { text-align:center; color:var(--muted); padding:40px 0; font-size:14px; }
 
+  /* ReAct 思考过程时间线 */
+  .react-timeline { margin:16px 0; }
+  .react-toggle { display:inline-flex; align-items:center; gap:6px; background:none; border:1.5px solid var(--border); border-radius:8px; padding:8px 16px; font-size:13px; color:var(--blue); cursor:pointer; transition:all .2s; }
+  .react-toggle:hover { background:#f0f6fb; border-color:var(--blue); }
+  .react-step { display:flex; gap:16px; padding:16px 0; border-bottom:1px solid var(--border); }
+  .react-step:last-child { border-bottom:none; }
+  .react-step-num { flex-shrink:0; width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:14px; }
+  .react-step-num.thinking { background:#e8f0fe; color:var(--blue); }
+  .react-step-num.final { background:#e6f4ea; color:var(--green); }
+  .react-step-body { flex:1; min-width:0; }
+  .react-step-body .thought { font-size:13px; color:#333; line-height:1.6; margin-bottom:8px; padding:8px 12px; background:#f8f9fb; border-radius:6px; border-left:3px solid #d0d7e2; }
+  .react-step-body .action-row { display:flex; align-items:center; gap:8px; font-size:12px; margin-bottom:6px; }
+  .react-step-body .action-tag { display:inline-block; padding:2px 8px; border-radius:4px; font-weight:600; font-size:11px; background:#d5e8f0; color:var(--blue); }
+  .react-step-body .obs { font-size:12px; color:var(--muted); padding:6px 10px; background:#fafcfd; border-radius:4px; border:1px dashed #e0e0e0; }
+  .react-step-body .obs-icon { margin-right:4px; }
+
   .stats-row { display:flex; gap:12px; flex-wrap:wrap; margin:12px 0; }
   .stat { background:#f0f6fb; border-radius:8px; padding:12px 16px; text-align:center; min-width:80px; }
   .stat .num { font-size:24px; font-weight:700; color:var(--blue); }
@@ -198,6 +214,32 @@ function render(data) {
   // 总结
   if (data.summary) {
     html += `<div class="card"><div class="summary-box">📝 <strong>论证结构总结</strong><br>${esc(data.summary)}</div></div>`;
+  }
+
+  // ReAct 思考过程（时间线）
+  const trace = data.react_trace || [];
+  if (trace.length) {
+    html += `<div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div class="section-title" style="margin-bottom:0;border-bottom:none;"><span class="icon">🧠</span>ReAct 推理过程（共 ${trace.length} 轮）</div>
+        <button class="react-toggle" id="traceToggle" onclick="toggleTrace()">▲ 收起</button>
+      </div>
+      <div class="react-timeline" id="traceBody">`;
+    trace.forEach((step, i) => {
+      const isFinal = step.is_final;
+      const thought = step.thought || '';
+      const action = step.action || '';
+      const obs = step.observation_detail || step.observation || '';
+      html += `<div class="react-step">
+        <div class="react-step-num ${isFinal?'final':'thinking'}">${step.turn}</div>
+        <div class="react-step-body">
+          <div class="thought">💭 <strong>Thought:</strong> ${esc(thought)}</div>
+          ${action ? `<div class="action-row">🔧 <strong>Action:</strong> <span class="action-tag">${esc(action)}</span>${isFinal ? ' <span class="badge" style="background:#27ae60;">✅ 任务完成</span>' : ''}</div>` : ''}
+          ${obs ? `<div class="obs"><span class="obs-icon">👁</span> <strong>Observation:</strong> ${esc(obs)}</div>` : ''}
+        </div>
+      </div>`;
+    });
+    html += `</div></div>`;
   }
 
   // 节点表
@@ -411,6 +453,18 @@ function esc(s) {
   if (!s) return '';
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
+
+function toggleTrace() {
+  const body = document.getElementById('traceBody');
+  const btn = document.getElementById('traceToggle');
+  if (body.style.display === 'none') {
+    body.style.display = 'block';
+    btn.innerHTML = '▲ 收起';
+  } else {
+    body.style.display = 'none';
+    btn.innerHTML = '▼ 展开';
+  }
+}
 </script>
 </body>
 </html>"""
@@ -431,13 +485,28 @@ def analyze():
 
     result = agent.analyze(essay_text, essay_topic=essay_topic, verbose=False)
 
-    # 构建前端友好的扁平结构
+    # 构建前端友好的扁平结构（含 ReAct 思考过程）
+    react_trace = result.get("react_trace", [])
+    # 精简：去掉 llm_raw 减少传输量
+    clean_trace = []
+    for entry in react_trace:
+        clean_trace.append({
+            "turn": entry["turn"],
+            "thought": entry.get("thought", ""),
+            "action": entry.get("action"),
+            "action_input": entry.get("action_input"),
+            "is_final": entry.get("is_final", False),
+            "observation": entry.get("observation", ""),
+            "observation_detail": entry.get("observation_detail", ""),
+        })
+
     return jsonify({
         "summary": result.get("summary"),
         "classification": result.get("classification"),
         "graph": result.get("graph"),
         "consistency": result.get("consistency"),
         "errors": result.get("errors", []),
+        "react_trace": clean_trace,
     })
 
 

@@ -402,11 +402,28 @@ class ArgGraphAgent:
 
             # 保存状态
             self._update_state(tool_name, tool_output)
+            obs_summary = self._summarize_result(tool_name, tool_output)
             self.tool_history.append({
                 "turn": turn,
                 "tool": tool_name,
-                "summary": self._summarize_result(tool_name, tool_output),
+                "summary": obs_summary,
             })
+
+            # 将 Observation 写回 trace_entry（供 Web 界面展示 ReAct 全过程）
+            trace_entry["observation"] = obs_summary
+            # 同时存一份精简的工具输出供前端展示
+            if tool_name == "adu_segmenter":
+                segs = tool_output.get("segments", [])
+                trace_entry["observation_detail"] = f"切得 {len(segs)} 个 ADU，涵盖 {tool_output.get('paragraph_count', '?')} 个自然段"
+            elif tool_name == "component_classifier":
+                nodes = tool_output.get("node_table", [])
+                trace_entry["observation_detail"] = f"分类得 {len(nodes)} 个节点"
+            elif tool_name == "relation_builder":
+                edges = tool_output.get("edge_table", [])
+                trace_entry["observation_detail"] = f"构建 {len(edges)} 条关系边，生成论证树和 Mermaid 图"
+            elif tool_name == "consistency_check":
+                passed = tool_output.get("passed", False)
+                trace_entry["observation_detail"] = f"一致性检查{'✅ 通过' if passed else '❌ 未通过'}"
 
             # 将工具结果加入上下文（完整输出，不截断）
             obs_full = json.dumps(tool_output, ensure_ascii=False, indent=2, default=str)
@@ -415,12 +432,11 @@ class ArgGraphAgent:
             messages.append({"role": "user", "content": obs_text})
 
             if verbose:
-                summary = self._summarize_result(tool_name, tool_output)
                 # 展示更详细的观察内容
                 obs_preview = obs_full[:250].replace("\n", "\n  │ ")
                 if len(obs_full) > 250:
                     obs_preview += f"\n  │ ...（共 {len(obs_full)} 字）"
-                print(f"  ┌─ 👁 Observation: {summary}")
+                print(f"  ┌─ 👁 Observation: {obs_summary}")
                 print(f"  │ {obs_preview}")
                 print(f"  └{'─' * 50}")
 
